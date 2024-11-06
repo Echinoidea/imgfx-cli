@@ -1,6 +1,9 @@
 use clap::{builder::styling::RgbColor, Parser};
-use image::{EncodableLayout, GenericImageView, ImageBuffer, Pixel, Rgba, RgbaImage};
-use std::io::{self, BufRead, Write};
+use image::{
+    codecs::png::PngEncoder, DynamicImage, GenericImageView, ImageBuffer, ImageEncoder,
+    ImageReader, Rgba, RgbaImage,
+};
+use std::io::{self, BufWriter, Cursor, Read, Write};
 
 #[derive(Parser, Debug)]
 #[command(name = "img-mod")]
@@ -13,7 +16,7 @@ struct Args {
 
     /// path/to/output/image
     #[arg(long, default_value = ".")]
-    output: String,
+    output: Option<String>,
 
     /// Function to perform on input image. 'or', 'and', 'xor', 'left', 'right'
     #[arg(short, long)]
@@ -66,15 +69,14 @@ fn get_channel_by_name_rgba_u8(name: &str, color: &Rgba<u8>) -> u8 {
 }
 
 fn or(
-    path: &str,
+    img: DynamicImage,
     lhs: Option<Vec<String>>,
     rhs: Option<Vec<String>>,
     color: RgbColor,
 ) -> RgbaImage {
-    let img = image::open(path).expect("Failed to open image.");
     let (width, height) = img.dimensions();
 
-    let mut output = ImageBuffer::new(width, height);
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
 
     let rhs = match rhs {
         Some(rhs) => (
@@ -85,37 +87,38 @@ fn or(
         None => (color.r(), color.b(), color.g()),
     };
 
-    for (x, y, pixel) in img.pixels() {
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
+
         let lhs = match lhs {
             Some(ref lhs) => (
-                get_channel_by_name_rgba_u8(&lhs[0], &pixel),
-                get_channel_by_name_rgba_u8(&lhs[1], &pixel),
-                get_channel_by_name_rgba_u8(&lhs[2], &pixel),
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
             ),
-            None => (pixel[0], pixel[1], pixel[2]),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
         let r = lhs.0 | rhs.0;
         let g = lhs.1 | rhs.1;
         let b = lhs.2 | rhs.2;
-        let a = pixel[3];
+        let a = in_pixel[3];
 
-        output.put_pixel(x, y, Rgba([r, g, b, a]));
-    }
+        *pixel = Rgba([r, g, b, a]);
+    });
 
     output
 }
 
 fn and(
-    path: &str,
+    img: DynamicImage,
     lhs: Option<Vec<String>>,
     rhs: Option<Vec<String>>,
     color: RgbColor,
 ) -> RgbaImage {
-    let img = image::open(path).expect("Failed to open image.");
     let (width, height) = img.dimensions();
 
-    let mut output = ImageBuffer::new(width, height);
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
 
     let rhs = match rhs {
         Some(rhs) => (
@@ -126,37 +129,38 @@ fn and(
         None => (color.r(), color.b(), color.g()),
     };
 
-    for (x, y, pixel) in img.pixels() {
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
+
         let lhs = match lhs {
             Some(ref lhs) => (
-                get_channel_by_name_rgba_u8(&lhs[0], &pixel),
-                get_channel_by_name_rgba_u8(&lhs[1], &pixel),
-                get_channel_by_name_rgba_u8(&lhs[2], &pixel),
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
             ),
-            None => (pixel[0], pixel[1], pixel[2]),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
         let r = lhs.0 & rhs.0;
         let g = lhs.1 & rhs.1;
         let b = lhs.2 & rhs.2;
-        let a = pixel[3];
+        let a = in_pixel[3];
 
-        output.put_pixel(x, y, Rgba([r, g, b, a]));
-    }
+        *pixel = Rgba([r, g, b, a]);
+    });
 
     output
 }
 
 fn xor(
-    path: &str,
+    img: DynamicImage,
     lhs: Option<Vec<String>>,
     rhs: Option<Vec<String>>,
     color: RgbColor,
 ) -> RgbaImage {
-    let img = image::open(path).expect("Failed to open image.");
     let (width, height) = img.dimensions();
 
-    let mut output = ImageBuffer::new(width, height);
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
 
     let rhs = match rhs {
         Some(rhs) => (
@@ -167,59 +171,59 @@ fn xor(
         None => (color.r(), color.b(), color.g()),
     };
 
-    for (x, y, pixel) in img.pixels() {
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
+
         let lhs = match lhs {
             Some(ref lhs) => (
-                get_channel_by_name_rgba_u8(&lhs[0], &pixel),
-                get_channel_by_name_rgba_u8(&lhs[1], &pixel),
-                get_channel_by_name_rgba_u8(&lhs[2], &pixel),
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
             ),
-            None => (pixel[0], pixel[1], pixel[2]),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
         let r = lhs.0 ^ rhs.0;
         let g = lhs.1 ^ rhs.1;
         let b = lhs.2 ^ rhs.2;
-        let a = pixel[3];
+        let a = in_pixel[3];
 
-        output.put_pixel(x, y, Rgba([r, g, b, a]));
-    }
-
-    output
-}
-
-fn left(path: &str, bits: u8) -> RgbaImage {
-    let img = image::open(path).expect("Failed to open image.");
-    let (width, height) = img.dimensions();
-
-    let mut output = ImageBuffer::new(width, height);
-
-    for (x, y, pixel) in img.pixels() {
-        let r = pixel[0] << bits;
-        let g = pixel[1] << bits;
-        let b = pixel[2] << bits;
-        let a = pixel[3];
-
-        output.put_pixel(x, y, Rgba([r, g, b, a]));
-    }
+        *pixel = Rgba([r, g, b, a]);
+    });
 
     output
 }
 
-fn right(path: &str, bits: u8) -> RgbaImage {
-    let img = image::open(path).expect("Failed to open image.");
+enum BitshiftDirection {
+    LEFT,
+    RIGHT,
+}
+
+fn bitshift(img: DynamicImage, direction: BitshiftDirection, bits: u8) -> RgbaImage {
     let (width, height) = img.dimensions();
 
-    let mut output = ImageBuffer::new(width, height);
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
 
-    for (x, y, pixel) in img.pixels() {
-        let r = pixel[0] >> bits;
-        let g = pixel[1] >> bits;
-        let b = pixel[2] >> bits;
-        let a = pixel[3];
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
 
-        output.put_pixel(x, y, Rgba([r, g, b, a]));
-    }
+        let (r, g, b, a) = match direction {
+            BitshiftDirection::LEFT => (
+                in_pixel[0] << bits,
+                in_pixel[1] << bits,
+                in_pixel[2] << bits,
+                in_pixel[3],
+            ),
+            BitshiftDirection::RIGHT => (
+                in_pixel[0] >> bits,
+                in_pixel[1] >> bits,
+                in_pixel[2] >> bits,
+                in_pixel[3],
+            ),
+        };
+
+        *pixel = Rgba([r, g, b, a]);
+    });
 
     output
 }
@@ -227,24 +231,30 @@ fn right(path: &str, bits: u8) -> RgbaImage {
 fn main() {
     let args = Args::parse();
 
-    let in_path = if let Some(path) = args.input_path {
-        path
-    } else {
-        let stdin = io::stdin();
-        let input = stdin
-            .lock()
-            .lines()
-            .next()
-            .expect("No input provided")
-            .expect("Failed to read input");
-        input.trim().to_string()
-    };
-    let out_path = args.output;
+    let in_path = args.input_path;
+    //let out_path = args.output;
     let operation = args.function;
     let color_arg = args.color;
     let bit_shift = args.bit_shift;
     let lhs = args.lhs;
     let rhs = args.rhs;
+
+    let img = match in_path {
+        Some(path) => image::open(path).expect("Failed to open image."),
+        None => {
+            let mut buffer = Vec::new();
+
+            io::stdin()
+                .read_to_end(&mut buffer)
+                .expect("Failed to read from stdin");
+
+            ImageReader::new(Cursor::new(buffer))
+                .with_guessed_format()
+                .expect("Failed to guess image format")
+                .decode()
+                .expect("Failed to decode image from stdin")
+        }
+    };
 
     let rgb = match color_arg {
         Some(hex) => hex_to_rgb(&hex).unwrap(),
@@ -252,25 +262,33 @@ fn main() {
     };
 
     let output: RgbaImage = match operation.as_str() {
-        "or" => or(&in_path, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "and" => and(&in_path, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "xor" => xor(&in_path, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "left" => left(&in_path, bit_shift.expect("No bitshift value arg provided")),
-        "right" => right(&in_path, bit_shift.expect("No bitshift value arg provided")),
+        "or" => or(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "and" => and(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "xor" => xor(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "left" => bitshift(img, BitshiftDirection::LEFT, bit_shift.unwrap()),
+        "right" => bitshift(img, BitshiftDirection::RIGHT, bit_shift.unwrap()),
         _ => panic!("Invalid operation"),
     };
 
-    match out_path.as_str() {
-        "" => output
-            .save("output.bmp")
-            .expect("Failed to save output image"),
-        _ => output
-            .save(out_path.clone())
-            .expect("Failed to save output image"),
-    }
+    // Epic fast buffer writing
+    let stdout = io::stdout();
+    let handle = stdout.lock();
+    let mut writer = BufWriter::with_capacity(2048 * 2048, handle);
 
-    let mut stdout = io::stdout().lock();
-    stdout
-        .write_all(format!("{}\n", out_path).as_bytes())
-        .expect("Failed to write to stdout");
+    let encoder = PngEncoder::new_with_quality(
+        &mut writer,
+        image::codecs::png::CompressionType::Fast,
+        image::codecs::png::FilterType::NoFilter,
+    );
+
+    encoder
+        .write_image(
+            &output,
+            output.width(),
+            output.height(),
+            image::ExtendedColorType::Rgba8,
+        )
+        .expect("Error while encoding buffer");
+
+    writer.flush().expect("error flushing writer");
 }
