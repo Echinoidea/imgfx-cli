@@ -7,24 +7,31 @@ use std::io::{self, BufRead, Write};
 #[command(version = "1.0.0")]
 #[command(about = "Bitwise operations and other stuff to images.", long_about = None)]
 struct Args {
+    /// path/to/input/image
     #[arg(short, long)]
     input_path: Option<String>,
 
-    #[arg(long)]
+    /// path/to/output/image
+    #[arg(long, default_value = ".")]
     output: String,
 
+    /// Function to perform on input image. 'or', 'and', 'xor', 'left', 'right'
     #[arg(short, long)]
     function: String,
 
+    /// Specify the left hand side operands for the function. E.g. --lhs b g r
     #[arg(long, num_args(1..))]
     lhs: Option<Vec<String>>,
 
+    /// Specify the right hand side operands for the function. E.g. --rhs b r b
     #[arg(long, num_args(1..))]
     rhs: Option<Vec<String>>,
 
+    /// String hex color value to compare input image color to. Must be "#AABBCC" format
     #[arg(short, long)]
     color: Option<String>,
 
+    /// If function is 'left' or 'right', how many bits to shift by.
     #[arg(short, long)]
     bit_shift: Option<u8>,
 }
