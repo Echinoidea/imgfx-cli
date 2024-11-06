@@ -1,5 +1,5 @@
 use clap::{builder::styling::RgbColor, Parser};
-use image::{EncodableLayout, GenericImageView, ImageBuffer, Rgba, RgbaImage};
+use image::{EncodableLayout, GenericImageView, ImageBuffer, Pixel, Rgba, RgbaImage};
 use std::io::{self, BufRead, Write};
 
 #[derive(Parser, Debug)]
@@ -10,11 +10,17 @@ struct Args {
     #[arg(short, long)]
     input_path: Option<String>,
 
-    #[arg(short, long)]
-    output_path: String,
+    #[arg(long)]
+    output: String,
 
     #[arg(short, long)]
     function: String,
+
+    #[arg(long, num_args(1..))]
+    lhs: Option<Vec<String>>,
+
+    #[arg(long, num_args(1..))]
+    rhs: Option<Vec<String>>,
 
     #[arg(short, long)]
     color: Option<String>,
@@ -34,16 +40,57 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
     }
 }
 
-fn or(path: &str, color: RgbColor) -> RgbaImage {
+fn get_channel_by_name_rgb_color(name: &str, color: &RgbColor) -> u8 {
+    match name {
+        "r" => color.r(),
+        "g" => color.g(),
+        "b" => color.b(),
+        _ => 0,
+    }
+}
+
+fn get_channel_by_name_rgba_u8(name: &str, color: &Rgba<u8>) -> u8 {
+    match name {
+        "r" => color[0],
+        "g" => color[1],
+        "b" => color[2],
+        _ => 0,
+    }
+}
+
+fn or(
+    path: &str,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
     let img = image::open(path).expect("Failed to open image.");
     let (width, height) = img.dimensions();
 
     let mut output = ImageBuffer::new(width, height);
 
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.b(), color.g()),
+    };
+
     for (x, y, pixel) in img.pixels() {
-        let r = pixel[0] | color.r();
-        let g = pixel[1] | color.g();
-        let b = pixel[2] | color.b();
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &pixel),
+            ),
+            None => (pixel[0], pixel[1], pixel[2]),
+        };
+
+        let r = lhs.0 | rhs.0;
+        let g = lhs.1 | rhs.1;
+        let b = lhs.2 | rhs.2;
         let a = pixel[3];
 
         output.put_pixel(x, y, Rgba([r, g, b, a]));
@@ -52,16 +99,39 @@ fn or(path: &str, color: RgbColor) -> RgbaImage {
     output
 }
 
-fn and(path: &str, color: RgbColor) -> RgbaImage {
+fn and(
+    path: &str,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
     let img = image::open(path).expect("Failed to open image.");
     let (width, height) = img.dimensions();
 
     let mut output = ImageBuffer::new(width, height);
 
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.b(), color.g()),
+    };
+
     for (x, y, pixel) in img.pixels() {
-        let r = pixel[0] & color.r();
-        let g = pixel[1] & color.g();
-        let b = pixel[2] & color.b();
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &pixel),
+            ),
+            None => (pixel[0], pixel[1], pixel[2]),
+        };
+
+        let r = lhs.0 & rhs.0;
+        let g = lhs.1 & rhs.1;
+        let b = lhs.2 & rhs.2;
         let a = pixel[3];
 
         output.put_pixel(x, y, Rgba([r, g, b, a]));
@@ -70,16 +140,39 @@ fn and(path: &str, color: RgbColor) -> RgbaImage {
     output
 }
 
-fn xor(path: &str, color: RgbColor) -> RgbaImage {
+fn xor(
+    path: &str,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
     let img = image::open(path).expect("Failed to open image.");
     let (width, height) = img.dimensions();
 
     let mut output = ImageBuffer::new(width, height);
 
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.b(), color.g()),
+    };
+
     for (x, y, pixel) in img.pixels() {
-        let r = pixel[0] ^ color.r();
-        let g = pixel[1] ^ color.g();
-        let b = pixel[2] ^ color.b();
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &pixel),
+            ),
+            None => (pixel[0], pixel[1], pixel[2]),
+        };
+
+        let r = lhs.0 ^ rhs.0;
+        let g = lhs.1 ^ rhs.1;
+        let b = lhs.2 ^ rhs.2;
         let a = pixel[3];
 
         output.put_pixel(x, y, Rgba([r, g, b, a]));
@@ -139,10 +232,12 @@ fn main() {
             .expect("Failed to read input");
         input.trim().to_string()
     };
-    let out_path = args.output_path;
+    let out_path = args.output;
     let operation = args.function;
     let color_arg = args.color;
     let bit_shift = args.bit_shift;
+    let lhs = args.lhs;
+    let rhs = args.rhs;
 
     let rgb = match color_arg {
         Some(hex) => hex_to_rgb(&hex).unwrap(),
@@ -150,9 +245,9 @@ fn main() {
     };
 
     let output: RgbaImage = match operation.as_str() {
-        "or" => or(&in_path, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "and" => and(&in_path, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "xor" => xor(&in_path, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "or" => or(&in_path, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "and" => and(&in_path, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "xor" => xor(&in_path, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
         "left" => left(&in_path, bit_shift.expect("No bitshift value arg provided")),
         "right" => right(&in_path, bit_shift.expect("No bitshift value arg provided")),
         _ => panic!("Invalid operation"),
@@ -171,9 +266,4 @@ fn main() {
     stdout
         .write_all(format!("{}\n", out_path).as_bytes())
         .expect("Failed to write to stdout");
-
-    //let _ = Command::new("nsxiv")
-    //    .arg("output.bmp")
-    //    .spawn()
-    //    .expect("Failed to execute");
 }
