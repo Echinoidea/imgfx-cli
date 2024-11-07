@@ -273,12 +273,13 @@ fn main() {
     // Epic fast buffer writing
     let stdout = io::stdout();
     let handle = stdout.lock();
-    let mut writer = BufWriter::with_capacity(2048 * 2048, handle);
+    //let mut writer = BufWriter::with_capacity(2048 * 2048, handle);
+    let mut writer = BufWriter::new(handle);
 
     let encoder = PngEncoder::new_with_quality(
         &mut writer,
-        image::codecs::png::CompressionType::Fast,
-        image::codecs::png::FilterType::NoFilter,
+        image::codecs::png::CompressionType::Default,
+        image::codecs::png::FilterType::Adaptive,
     );
 
     encoder
@@ -289,6 +290,7 @@ fn main() {
             image::ExtendedColorType::Rgba8,
         )
         .expect("Error while encoding buffer");
+    //output.write_to(&mut writer, image::ImageFormat::Png);
 
     writer.flush().expect("error flushing writer");
 }
