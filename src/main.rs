@@ -1,4 +1,4 @@
-use clap::{builder::styling::RgbColor, Parser};
+use clap::{builder::styling::RgbColor, ArgAction, Parser};
 use image::{
     codecs::png::PngEncoder, DynamicImage, GenericImageView, ImageBuffer, ImageEncoder,
     ImageReader, Rgba, RgbaImage,
@@ -37,6 +37,9 @@ struct Args {
     /// If function is 'left' or 'right', how many bits to shift by.
     #[arg(short, long)]
     bit_shift: Option<u8>,
+
+    #[arg(short, long, action=ArgAction::SetTrue)]
+    negate: bool,
 }
 
 fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
@@ -73,6 +76,7 @@ fn or(
     lhs: Option<Vec<String>>,
     rhs: Option<Vec<String>>,
     color: RgbColor,
+    negate: bool,
 ) -> RgbaImage {
     let (width, height) = img.dimensions();
 
@@ -99,9 +103,11 @@ fn or(
             None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
-        let r = lhs.0 | rhs.0;
-        let g = lhs.1 | rhs.1;
-        let b = lhs.2 | rhs.2;
+        let (r, g, b) = match negate {
+            true => (!(lhs.0 | rhs.0), !(lhs.1 | rhs.1), !(lhs.2 | rhs.2)),
+            false => ((lhs.0 | rhs.0), (lhs.1 | rhs.1), (lhs.2 | rhs.2)),
+        };
+
         let a = in_pixel[3];
 
         *pixel = Rgba([r, g, b, a]);
@@ -115,6 +121,7 @@ fn and(
     lhs: Option<Vec<String>>,
     rhs: Option<Vec<String>>,
     color: RgbColor,
+    negate: bool,
 ) -> RgbaImage {
     let (width, height) = img.dimensions();
 
@@ -141,9 +148,11 @@ fn and(
             None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
-        let r = lhs.0 & rhs.0;
-        let g = lhs.1 & rhs.1;
-        let b = lhs.2 & rhs.2;
+        let (r, g, b) = match negate {
+            true => (!(lhs.0 & rhs.0), !(lhs.1 & rhs.1), !(lhs.2 & rhs.2)),
+            false => ((lhs.0 & rhs.0), (lhs.1 & rhs.1), (lhs.2 & rhs.2)),
+        };
+
         let a = in_pixel[3];
 
         *pixel = Rgba([r, g, b, a]);
@@ -157,6 +166,7 @@ fn xor(
     lhs: Option<Vec<String>>,
     rhs: Option<Vec<String>>,
     color: RgbColor,
+    negate: bool,
 ) -> RgbaImage {
     let (width, height) = img.dimensions();
 
@@ -183,9 +193,11 @@ fn xor(
             None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
-        let r = lhs.0 ^ rhs.0;
-        let g = lhs.1 ^ rhs.1;
-        let b = lhs.2 ^ rhs.2;
+        let (r, g, b) = match negate {
+            true => (!(lhs.0 ^ rhs.0), !(lhs.1 ^ rhs.1), !(lhs.2 ^ rhs.2)),
+            false => ((lhs.0 ^ rhs.0), (lhs.1 ^ rhs.1), (lhs.2 ^ rhs.2)),
+        };
+
         let a = in_pixel[3];
 
         *pixel = Rgba([r, g, b, a]);
@@ -228,6 +240,174 @@ fn bitshift(img: DynamicImage, direction: BitshiftDirection, bits: u8) -> RgbaIm
     output
 }
 
+fn add(
+    img: DynamicImage,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
+    let (width, height) = img.dimensions();
+
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
+
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.b(), color.g()),
+    };
+
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
+
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
+            ),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
+        };
+
+        let r = lhs.0 + rhs.0;
+        let g = lhs.1 + rhs.1;
+        let b = lhs.2 + rhs.2;
+        let a = in_pixel[3];
+
+        *pixel = Rgba([r, g, b, a]);
+    });
+
+    output
+}
+
+fn sub(
+    img: DynamicImage,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
+    let (width, height) = img.dimensions();
+
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
+
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.b(), color.g()),
+    };
+
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
+
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
+            ),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
+        };
+
+        let r = lhs.0 - rhs.0;
+        let g = lhs.1 - rhs.1;
+        let b = lhs.2 - rhs.2;
+        let a = in_pixel[3];
+
+        *pixel = Rgba([r, g, b, a]);
+    });
+
+    output
+}
+
+fn mult(
+    img: DynamicImage,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
+    let (width, height) = img.dimensions();
+
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
+
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.b(), color.g()),
+    };
+
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
+
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
+            ),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
+        };
+
+        let r = lhs.0 * rhs.0;
+        let g = lhs.1 * rhs.1;
+        let b = lhs.2 * rhs.2;
+        let a = in_pixel[3];
+
+        *pixel = Rgba([r, g, b, a]);
+    });
+
+    output
+}
+
+fn div(
+    img: DynamicImage,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
+    let (width, height) = img.dimensions();
+
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
+
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.b(), color.g()),
+    };
+
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
+
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
+            ),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
+        };
+
+        let r = lhs.0 / rhs.0;
+        let g = lhs.1 / rhs.1;
+        let b = lhs.2 / rhs.2;
+        let a = in_pixel[3];
+
+        *pixel = Rgba([r, g, b, a]);
+    });
+
+    output
+}
+
 fn main() {
     let args = Args::parse();
 
@@ -238,6 +418,7 @@ fn main() {
     let bit_shift = args.bit_shift;
     let lhs = args.lhs;
     let rhs = args.rhs;
+    let negate = args.negate;
 
     let img = match in_path {
         Some(path) => image::open(path).expect("Failed to open image."),
@@ -262,11 +443,15 @@ fn main() {
     };
 
     let output: RgbaImage = match operation.as_str() {
-        "or" => or(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "and" => and(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "xor" => xor(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "or" => or(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate),
+        "and" => and(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate),
+        "xor" => xor(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate),
         "left" => bitshift(img, BitshiftDirection::LEFT, bit_shift.unwrap()),
         "right" => bitshift(img, BitshiftDirection::RIGHT, bit_shift.unwrap()),
+        "add" => add(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "sub" => sub(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "mult" => mult(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
+        "div" => div(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
         _ => panic!("Invalid operation"),
     };
 
