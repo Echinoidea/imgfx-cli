@@ -1,44 +1,53 @@
-use clap::{builder::styling::RgbColor, ArgAction, Parser};
+use clap::{builder::styling::RgbColor, ArgAction, Parser, Subcommand};
 use image::{
     codecs::png::PngEncoder, DynamicImage, GenericImageView, ImageBuffer, ImageEncoder,
     ImageReader, Rgba, RgbaImage,
 };
 use std::io::{self, BufWriter, Cursor, Read, Write};
 
-#[derive(Parser, Debug)]
+#[derive(Subcommand)]
+enum SubCommands {
+    OR { color: String },
+    AND { color: String },
+    XOR { color: String },
+    LEFT { bits: String },
+    RIGHT { bits: String },
+    ADD { color: String },
+    SUB { color: String },
+    MULT { color: String },
+    DIV { color: String },
+}
+
+#[derive(Parser)]
 #[command(name = "img-mod")]
-#[command(version = "1.0.0")]
+#[command(version = "1.0.1")]
 #[command(about = "Bitwise operations and other stuff to images.", long_about = None)]
 struct Args {
+    #[command(subcommand)]
+    cmd: SubCommands,
+
     /// path/to/input/image
-    #[arg(short, long)]
-    input_path: Option<String>,
+    #[arg(short, long, global = true)]
+    input: Option<String>,
 
     /// path/to/output/image
     #[arg(long, default_value = ".")]
     output: Option<String>,
 
-    /// Function to perform on input image. 'or', 'and', 'xor', 'left', 'right'
-    #[arg(short, long)]
-    function: String,
-
     /// Specify the left hand side operands for the function. E.g. --lhs b g r
-    #[arg(long, num_args(1..))]
+    #[arg(long, num_args(1..), global = true)]
     lhs: Option<Vec<String>>,
 
     /// Specify the right hand side operands for the function. E.g. --rhs b r b
-    #[arg(long, num_args(1..))]
+    #[arg(long, num_args(1..), global = true)]
     rhs: Option<Vec<String>>,
-
-    /// String hex color value to compare input image color to. Must be "#AABBCC" format
-    #[arg(short, long)]
-    color: Option<String>,
 
     /// If function is 'left' or 'right', how many bits to shift by.
     #[arg(short, long)]
     bit_shift: Option<u8>,
 
-    #[arg(short, long, action=ArgAction::SetTrue)]
+    /// Negate the logical operator
+    #[arg(short, long, action=ArgAction::SetTrue, global = true)]
     negate: bool,
 }
 
@@ -47,6 +56,11 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
         let r = u8::from_str_radix(&hex[1..3], 16).ok()?;
         let g = u8::from_str_radix(&hex[3..5], 16).ok()?;
         let b = u8::from_str_radix(&hex[5..7], 16).ok()?;
+        Some((r, g, b))
+    } else if hex.len() == 6 {
+        let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+        let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+        let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
         Some((r, g, b))
     } else {
         None
@@ -221,15 +235,15 @@ fn bitshift(img: DynamicImage, direction: BitshiftDirection, bits: u8) -> RgbaIm
 
         let (r, g, b, a) = match direction {
             BitshiftDirection::LEFT => (
-                in_pixel[0] << bits,
-                in_pixel[1] << bits,
-                in_pixel[2] << bits,
+                in_pixel[0].wrapping_shl(bits.into()),
+                in_pixel[1].wrapping_shl(bits.into()),
+                in_pixel[2].wrapping_shl(bits.into()),
                 in_pixel[3],
             ),
             BitshiftDirection::RIGHT => (
-                in_pixel[0] >> bits,
-                in_pixel[1] >> bits,
-                in_pixel[2] >> bits,
+                in_pixel[0].wrapping_shr(bits.into()),
+                in_pixel[1].wrapping_shr(bits.into()),
+                in_pixel[2].wrapping_shr(bits.into()),
                 in_pixel[3],
             ),
         };
@@ -271,9 +285,9 @@ fn add(
             None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
-        let r = lhs.0 + rhs.0;
-        let g = lhs.1 + rhs.1;
-        let b = lhs.2 + rhs.2;
+        let r = lhs.0.wrapping_add(rhs.0);
+        let g = lhs.1.wrapping_add(rhs.1);
+        let b = lhs.2.wrapping_add(rhs.2);
         let a = in_pixel[3];
 
         *pixel = Rgba([r, g, b, a]);
@@ -355,9 +369,9 @@ fn mult(
             None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
-        let r = lhs.0 * rhs.0;
-        let g = lhs.1 * rhs.1;
-        let b = lhs.2 * rhs.2;
+        let r = lhs.0.wrapping_mul(rhs.0);
+        let g = lhs.1.wrapping_mul(rhs.1);
+        let b = lhs.2.wrapping_mul(rhs.2);
         let a = in_pixel[3];
 
         *pixel = Rgba([r, g, b, a]);
@@ -397,9 +411,9 @@ fn div(
             None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
-        let r = lhs.0 / rhs.0;
-        let g = lhs.1 / rhs.1;
-        let b = lhs.2 / rhs.2;
+        let r = lhs.0 / rhs.0.max(1);
+        let g = lhs.1 / rhs.1.max(1);
+        let b = lhs.2 / rhs.2.max(1);
         let a = in_pixel[3];
 
         *pixel = Rgba([r, g, b, a]);
@@ -411,11 +425,10 @@ fn div(
 fn main() {
     let args = Args::parse();
 
-    let in_path = args.input_path;
-    //let out_path = args.output;
-    let operation = args.function;
-    let color_arg = args.color;
-    let bit_shift = args.bit_shift;
+    let mut color_arg: Option<&str> = None;
+    let mut bit_shift = "";
+
+    let in_path = args.input;
     let lhs = args.lhs;
     let rhs = args.rhs;
     let negate = args.negate;
@@ -437,28 +450,60 @@ fn main() {
         }
     };
 
-    let rgb = match color_arg {
-        Some(hex) => hex_to_rgb(&hex).unwrap(),
-        None => (0, 0, 0),
-    };
-
-    let output: RgbaImage = match operation.as_str() {
-        "or" => or(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate),
-        "and" => and(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate),
-        "xor" => xor(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate),
-        "left" => bitshift(img, BitshiftDirection::LEFT, bit_shift.unwrap()),
-        "right" => bitshift(img, BitshiftDirection::RIGHT, bit_shift.unwrap()),
-        "add" => add(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "sub" => sub(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "mult" => mult(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
-        "div" => div(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2)),
-        _ => panic!("Invalid operation"),
+    let output = match args.cmd {
+        SubCommands::OR { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            or(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate)
+        }
+        SubCommands::AND { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            and(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate)
+        }
+        SubCommands::XOR { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            xor(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate)
+        }
+        SubCommands::ADD { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            add(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
+        }
+        SubCommands::SUB { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            sub(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
+        }
+        SubCommands::MULT { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            mult(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
+        }
+        SubCommands::DIV { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            div(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
+        }
+        SubCommands::LEFT { bits } => {
+            bit_shift = &bits;
+            bitshift(
+                img,
+                BitshiftDirection::LEFT,
+                bit_shift
+                    .parse::<u8>()
+                    .expect("Could not parse bits arg to u8"),
+            )
+        }
+        SubCommands::RIGHT { bits } => {
+            bit_shift = &bits;
+            bitshift(
+                img,
+                BitshiftDirection::RIGHT,
+                bit_shift
+                    .parse::<u8>()
+                    .expect("Could not parse bits arg to u8"),
+            )
+        }
     };
 
     // Epic fast buffer writing
     let stdout = io::stdout();
     let handle = stdout.lock();
-    //let mut writer = BufWriter::with_capacity(2048 * 2048, handle);
     let mut writer = BufWriter::new(handle);
 
     let encoder = PngEncoder::new_with_quality(
