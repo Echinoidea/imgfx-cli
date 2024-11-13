@@ -21,7 +21,7 @@ cargo build --release
 ```
 
 ## Usage
-Usage: imgmod [OPTIONS] <COMMAND>
+```Usage: imgmod [OPTIONS] <COMMAND>
 
 Commands:
   or     
@@ -44,6 +44,7 @@ Options:
   -n, --negate                 Negate the logical operator
   -h, --help                   Print help
   -V, --version                Print version
+```
 
 ## Examples
 ```imgmod left 1 -i ~/Pictures/ImgMod/samurai-jack.jpg | imgmod xor ff0000 --lhs b b b --rhs r r r -n | imgmod and ff0000 | imgmod left 1 > output.png```
