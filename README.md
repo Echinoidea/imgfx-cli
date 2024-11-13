@@ -12,11 +12,11 @@
 
 ## Installation
 
-To install `ImgMod`, clone the repository and build it with `cargo`:
+To install `imgmod`, clone the repository and build it with `cargo`:
 
 ```bash
-git clone https://github.com/yourusername/img-mod.git
-cd img-mod
+git clone https://github.com/Echinoidea/img-mod.git imgmod
+cd imgmod
 cargo build --release
 ```
 
