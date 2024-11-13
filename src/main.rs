@@ -235,15 +235,15 @@ fn bitshift(img: DynamicImage, direction: BitshiftDirection, bits: u8) -> RgbaIm
 
         let (r, g, b, a) = match direction {
             BitshiftDirection::LEFT => (
-                in_pixel[0].wrapping_shl(bits.into()),
-                in_pixel[1].wrapping_shl(bits.into()),
-                in_pixel[2].wrapping_shl(bits.into()),
+                ((in_pixel[0] as u16) << bits).min(255) as u8,
+                ((in_pixel[1] as u16) << bits).min(255) as u8,
+                ((in_pixel[2] as u16) << bits).min(255) as u8,
                 in_pixel[3],
             ),
             BitshiftDirection::RIGHT => (
-                in_pixel[0].wrapping_shr(bits.into()),
-                in_pixel[1].wrapping_shr(bits.into()),
-                in_pixel[2].wrapping_shr(bits.into()),
+                ((in_pixel[0] as u16).wrapping_shr(bits.into())).min(255) as u8,
+                ((in_pixel[1] as u16).wrapping_shr(bits.into())).min(255) as u8,
+                ((in_pixel[2] as u16).wrapping_shr(bits.into())).min(255) as u8,
                 in_pixel[3],
             ),
         };

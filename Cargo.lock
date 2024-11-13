@@ -3,14 +3,6 @@
 version = 3
 
 [[package]]
-name = "ImgMod"
-version = "0.1.0"
-dependencies = [
- "clap",
- "image",
-]
-
-[[package]]
 name = "adler2"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -416,6 +408,14 @@ checksum = "e031e8e3d94711a9ccb5d6ea357439ef3dcbed361798bd4071dc4d9793fbe22f"
 dependencies = [
  "byteorder-lite",
  "quick-error",
+]
+
+[[package]]
+name = "imgmod"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "image",
 ]
 
 [[package]]
