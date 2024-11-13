@@ -21,7 +21,8 @@ cargo build --release
 ```
 
 ## Usage
-```Usage: imgmod [OPTIONS] <COMMAND>
+```
+Usage: imgmod [OPTIONS] <COMMAND>
 
 Commands:
   or     
