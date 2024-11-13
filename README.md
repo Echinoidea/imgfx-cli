@@ -21,5 +21,5 @@ cargo build --release
 ```
 
 ## Examples
-[input](docs/assets/samurai-jack.jpg)
-[output](docs/assets/output-samurai-jack.png)
+![input](docs/assets/samurai-jack.jpg)
+![output](docs/assets/output-samurai-jack.png)
