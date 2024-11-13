@@ -48,6 +48,14 @@ Options:
 ```
 
 ## Examples
-```imgmod left 1 -i ~/Pictures/ImgMod/samurai-jack.jpg | imgmod xor ff0000 --lhs b b b --rhs r r r -n | imgmod and ff0000 | imgmod left 1 > output.png```
+```imgmod left 1 -i samurai-jack.jpg | imgmod xor ff0000 --lhs b b b --rhs r r r -n | imgmod and ff0000 | imgmod left 1 > output.png```
 ![input](docs/images/samurai-jack.jpg)
 ![output](docs/images/output-samurai-jack.png)
+
+```imgmod -i flcl.png left 4 | imgmod and f788c72```
+![input](docs/images/flcl.png)
+![output](docs/images/output-flcl.png)
+
+```imgmod -i ultramurder.png div ff0000 --lhs g g g --rhs b r b```
+![input](docs/images/ultramuder.png)
+![output](docs/images/output-ultrakill-isolated.png)
