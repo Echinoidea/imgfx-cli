@@ -102,7 +102,7 @@ fn or(
             get_channel_by_name_rgb_color(&rhs[1], &color),
             get_channel_by_name_rgb_color(&rhs[2], &color),
         ),
-        None => (color.r(), color.b(), color.g()),
+        None => (color.r(), color.g(), color.b()),
     };
 
     output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
@@ -147,7 +147,7 @@ fn and(
             get_channel_by_name_rgb_color(&rhs[1], &color),
             get_channel_by_name_rgb_color(&rhs[2], &color),
         ),
-        None => (color.r(), color.b(), color.g()),
+        None => (color.r(), color.g(), color.b()),
     };
 
     output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
@@ -192,7 +192,7 @@ fn xor(
             get_channel_by_name_rgb_color(&rhs[1], &color),
             get_channel_by_name_rgb_color(&rhs[2], &color),
         ),
-        None => (color.r(), color.b(), color.g()),
+        None => (color.r(), color.g(), color.b()),
     };
 
     output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
@@ -270,7 +270,7 @@ fn add(
             get_channel_by_name_rgb_color(&rhs[1], &color),
             get_channel_by_name_rgb_color(&rhs[2], &color),
         ),
-        None => (color.r(), color.b(), color.g()),
+        None => (color.r(), color.g(), color.b()),
     };
 
     output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
@@ -312,7 +312,7 @@ fn sub(
             get_channel_by_name_rgb_color(&rhs[1], &color),
             get_channel_by_name_rgb_color(&rhs[2], &color),
         ),
-        None => (color.r(), color.b(), color.g()),
+        None => (color.r(), color.g(), color.b()),
     };
 
     output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
@@ -354,7 +354,7 @@ fn mult(
             get_channel_by_name_rgb_color(&rhs[1], &color),
             get_channel_by_name_rgb_color(&rhs[2], &color),
         ),
-        None => (color.r(), color.b(), color.g()),
+        None => (color.r(), color.g(), color.b()),
     };
 
     output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
@@ -396,7 +396,7 @@ fn div(
             get_channel_by_name_rgb_color(&rhs[1], &color),
             get_channel_by_name_rgb_color(&rhs[2], &color),
         ),
-        None => (color.r(), color.b(), color.g()),
+        None => (color.r(), color.g(), color.b()),
     };
 
     output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
