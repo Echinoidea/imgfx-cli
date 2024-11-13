@@ -57,5 +57,5 @@ Options:
 ![output](docs/images/output-flcl.png)
 
 ```imgmod -i ultramurder.png div ff0000 --lhs g g g --rhs b r b```
-![input](docs/images/ultramuder.png)
+![input](docs/images/ultramurder.png)
 ![output](docs/images/output-ultrakill-isolated.png)
