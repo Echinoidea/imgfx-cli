@@ -48,11 +48,11 @@ Options:
 ```
 
 ## Examples
-```imgmod left 1 -i samurai-jack.jpg | imgmod xor ff0000 --lhs b b b --rhs r r r -n | imgmod and ff0000 | imgmod left 1 > output.png```
+```imgmod -i samurai-jack.jpg left 1 | imgmod xor ff0000 --lhs b b b --rhs r r r -n | imgmod and ff0000 | imgmod left 1 > output.png```
 ![input](docs/images/samurai-jack.jpg)
 ![output](docs/images/output-samurai-jack.png)
 
-```imgmod -i flcl.png left 4 | imgmod and f788c72```
+```imgmod -i flcl.png left 4 | imgmod and f7c788```
 ![input](docs/images/flcl.png)
 ![output](docs/images/output-flcl.png)
 
