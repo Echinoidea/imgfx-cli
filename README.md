@@ -21,5 +21,6 @@ cargo build --release
 ```
 
 ## Examples
+```imgmod left 1 -i ~/Pictures/ImgMod/samurai-jack.jpg | imgmod xor ff0000 --lhs b b b --rhs r r r -n | imgmod and ff0000 | imgmod left 1 > output.png```
 ![input](docs/images/samurai-jack.jpg)
 ![output](docs/images/output-samurai-jack.png)
