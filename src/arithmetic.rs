@@ -1,188 +1,186 @@
-pub mod arithmetic {
-    use clap::builder::styling::RgbColor;
-    use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba, RgbaImage};
+use clap::builder::styling::RgbColor;
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba, RgbaImage};
 
-    use crate::utils::utils::{get_channel_by_name_rgb_color, get_channel_by_name_rgba_u8};
+use crate::utils::{get_channel_by_name_rgb_color, get_channel_by_name_rgba_u8};
 
-    pub fn add(
-        img: DynamicImage,
-        lhs: Option<Vec<String>>,
-        rhs: Option<Vec<String>>,
-        color: RgbColor,
-    ) -> RgbaImage {
-        let (width, height) = img.dimensions();
+pub fn add(
+    img: DynamicImage,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
+    let (width, height) = img.dimensions();
 
-        let mut output: RgbaImage = ImageBuffer::new(width, height);
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
 
-        let rhs = match rhs {
-            Some(rhs) => (
-                get_channel_by_name_rgb_color(&rhs[0], &color),
-                get_channel_by_name_rgb_color(&rhs[1], &color),
-                get_channel_by_name_rgb_color(&rhs[2], &color),
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.g(), color.b()),
+    };
+
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
+
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
             ),
-            None => (color.r(), color.g(), color.b()),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
-        output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
-            let in_pixel = img.get_pixel(x, y);
+        let r = lhs.0.wrapping_add(rhs.0);
+        let g = lhs.1.wrapping_add(rhs.1);
+        let b = lhs.2.wrapping_add(rhs.2);
+        let a = in_pixel[3];
 
-            let lhs = match lhs {
-                Some(ref lhs) => (
-                    get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
-                    get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
-                    get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
-                ),
-                None => (in_pixel[0], in_pixel[1], in_pixel[2]),
-            };
+        *pixel = Rgba([r, g, b, a]);
+    });
 
-            let r = lhs.0.wrapping_add(rhs.0);
-            let g = lhs.1.wrapping_add(rhs.1);
-            let b = lhs.2.wrapping_add(rhs.2);
-            let a = in_pixel[3];
+    output
+}
 
-            *pixel = Rgba([r, g, b, a]);
-        });
+pub fn sub(
+    img: DynamicImage,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+    raw: bool,
+) -> RgbaImage {
+    let (width, height) = img.dimensions();
 
-        output
-    }
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
 
-    pub fn sub(
-        img: DynamicImage,
-        lhs: Option<Vec<String>>,
-        rhs: Option<Vec<String>>,
-        color: RgbColor,
-        raw: bool,
-    ) -> RgbaImage {
-        let (width, height) = img.dimensions();
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.g(), color.b()),
+    };
 
-        let mut output: RgbaImage = ImageBuffer::new(width, height);
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
 
-        let rhs = match rhs {
-            Some(rhs) => (
-                get_channel_by_name_rgb_color(&rhs[0], &color),
-                get_channel_by_name_rgb_color(&rhs[1], &color),
-                get_channel_by_name_rgb_color(&rhs[2], &color),
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
             ),
-            None => (color.r(), color.g(), color.b()),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
-        output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
-            let in_pixel = img.get_pixel(x, y);
+        let (r, g, b) = match raw {
+            true => {
+                let r = lhs.0 - rhs.0;
+                let g = lhs.1 - rhs.1;
+                let b = lhs.2 - rhs.2;
 
-            let lhs = match lhs {
-                Some(ref lhs) => (
-                    get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
-                    get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
-                    get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
-                ),
-                None => (in_pixel[0], in_pixel[1], in_pixel[2]),
-            };
+                (r, g, b)
+            }
+            false => {
+                let r = (lhs.0 as i32 - rhs.0 as i32).abs() as u8;
+                let g = (lhs.1 as i32 - rhs.1 as i32).abs() as u8;
+                let b = (lhs.2 as i32 - rhs.2 as i32).abs() as u8;
 
-            let (r, g, b) = match raw {
-                true => {
-                    let r = lhs.0 - rhs.0;
-                    let g = lhs.1 - rhs.1;
-                    let b = lhs.2 - rhs.2;
-
-                    (r, g, b)
-                }
-                false => {
-                    let r = (lhs.0 as i32 - rhs.0 as i32).abs() as u8;
-                    let g = (lhs.1 as i32 - rhs.1 as i32).abs() as u8;
-                    let b = (lhs.2 as i32 - rhs.2 as i32).abs() as u8;
-
-                    (r, g, b)
-                }
-            };
-
-            let a = in_pixel[3];
-            *pixel = Rgba([r, g, b, a]);
-        });
-
-        output
-    }
-
-    pub fn mult(
-        img: DynamicImage,
-        lhs: Option<Vec<String>>,
-        rhs: Option<Vec<String>>,
-        color: RgbColor,
-    ) -> RgbaImage {
-        let (width, height) = img.dimensions();
-
-        let mut output: RgbaImage = ImageBuffer::new(width, height);
-
-        let rhs = match rhs {
-            Some(rhs) => (
-                get_channel_by_name_rgb_color(&rhs[0], &color),
-                get_channel_by_name_rgb_color(&rhs[1], &color),
-                get_channel_by_name_rgb_color(&rhs[2], &color),
-            ),
-            None => (color.r(), color.g(), color.b()),
+                (r, g, b)
+            }
         };
 
-        output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
-            let in_pixel = img.get_pixel(x, y);
+        let a = in_pixel[3];
+        *pixel = Rgba([r, g, b, a]);
+    });
 
-            let lhs = match lhs {
-                Some(ref lhs) => (
-                    get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
-                    get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
-                    get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
-                ),
-                None => (in_pixel[0], in_pixel[1], in_pixel[2]),
-            };
+    output
+}
 
-            let r = lhs.0.wrapping_mul(rhs.0);
-            let g = lhs.1.wrapping_mul(rhs.1);
-            let b = lhs.2.wrapping_mul(rhs.2);
-            let a = in_pixel[3];
+pub fn mult(
+    img: DynamicImage,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
+    let (width, height) = img.dimensions();
 
-            *pixel = Rgba([r, g, b, a]);
-        });
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
 
-        output
-    }
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.g(), color.b()),
+    };
 
-    pub fn div(
-        img: DynamicImage,
-        lhs: Option<Vec<String>>,
-        rhs: Option<Vec<String>>,
-        color: RgbColor,
-    ) -> RgbaImage {
-        let (width, height) = img.dimensions();
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
 
-        let mut output: RgbaImage = ImageBuffer::new(width, height);
-
-        let rhs = match rhs {
-            Some(rhs) => (
-                get_channel_by_name_rgb_color(&rhs[0], &color),
-                get_channel_by_name_rgb_color(&rhs[1], &color),
-                get_channel_by_name_rgb_color(&rhs[2], &color),
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
             ),
-            None => (color.r(), color.g(), color.b()),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
         };
 
-        output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
-            let in_pixel = img.get_pixel(x, y);
+        let r = lhs.0.wrapping_mul(rhs.0);
+        let g = lhs.1.wrapping_mul(rhs.1);
+        let b = lhs.2.wrapping_mul(rhs.2);
+        let a = in_pixel[3];
 
-            let lhs = match lhs {
-                Some(ref lhs) => (
-                    get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
-                    get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
-                    get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
-                ),
-                None => (in_pixel[0], in_pixel[1], in_pixel[2]),
-            };
+        *pixel = Rgba([r, g, b, a]);
+    });
 
-            let r = lhs.0 / rhs.0.max(1);
-            let g = lhs.1 / rhs.1.max(1);
-            let b = lhs.2 / rhs.2.max(1);
-            let a = in_pixel[3];
+    output
+}
 
-            *pixel = Rgba([r, g, b, a]);
-        });
+pub fn div(
+    img: DynamicImage,
+    lhs: Option<Vec<String>>,
+    rhs: Option<Vec<String>>,
+    color: RgbColor,
+) -> RgbaImage {
+    let (width, height) = img.dimensions();
 
-        output
-    }
+    let mut output: RgbaImage = ImageBuffer::new(width, height);
+
+    let rhs = match rhs {
+        Some(rhs) => (
+            get_channel_by_name_rgb_color(&rhs[0], &color),
+            get_channel_by_name_rgb_color(&rhs[1], &color),
+            get_channel_by_name_rgb_color(&rhs[2], &color),
+        ),
+        None => (color.r(), color.g(), color.b()),
+    };
+
+    output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let in_pixel = img.get_pixel(x, y);
+
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
+            ),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
+        };
+
+        let r = lhs.0 / rhs.0.max(1);
+        let g = lhs.1 / rhs.1.max(1);
+        let b = lhs.2 / rhs.2.max(1);
+        let a = in_pixel[3];
+
+        *pixel = Rgba([r, g, b, a]);
+    });
+
+    output
 }

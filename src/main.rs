@@ -1,11 +1,11 @@
-use arithmetic::arithmetic::{add, div, mult, sub};
-use bitwise::bitwise::{and, bitshift, or, xor, BitshiftDirection};
-use blend::blend::{overlay, screen};
+use arithmetic::{add, div, mult, sub};
+use bitwise::{and, bitshift, or, xor, BitshiftDirection};
+use blend::{overlay, screen};
 use clap::{builder::styling::RgbColor, ArgAction, Parser, Subcommand};
-use functions::functions::{average, bloom};
+use functions::{average, bloom};
 use image::{codecs::png::PngEncoder, ImageEncoder, ImageReader};
 use std::io::{self, BufWriter, Cursor, Read, Write};
-use utils::utils::hex_to_rgb;
+use utils::hex_to_rgb;
 
 mod arithmetic;
 mod bitwise;
