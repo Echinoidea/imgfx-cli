@@ -1,5 +1,6 @@
 use arithmetic::arithmetic::{add, div, mult, sub};
 use bitwise::bitwise::{and, bitshift, or, xor, BitshiftDirection};
+use blend::blend::{overlay, screen};
 use clap::{builder::styling::RgbColor, ArgAction, Parser, Subcommand};
 use functions::functions::average;
 use image::{codecs::png::PngEncoder, ImageEncoder, ImageReader};
@@ -8,6 +9,7 @@ use utils::utils::hex_to_rgb;
 
 mod arithmetic;
 mod bitwise;
+mod blend;
 mod functions;
 mod utils;
 
@@ -24,6 +26,8 @@ enum SubCommands {
     MULT { color: String },
     DIV { color: String },
     AVG { color: String },
+    SCREEN { color: String },
+    OVERLAY { color: String },
 }
 
 #[derive(Parser)]
@@ -162,6 +166,14 @@ fn main() {
         SubCommands::AVG { color } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             average(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
+        }
+        SubCommands::SCREEN { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            screen(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
+        }
+        SubCommands::OVERLAY { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            overlay(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
     };
 
