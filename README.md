@@ -3,12 +3,13 @@
 
 ----------
 ## Features 
-- AND, OR, XOR
-- ADD, SUB, MULT, DIV
-- Bitwise LEFT & RIGHT
+- and, or, xor
+- add, sub, div, mult
+- Bitwise left & right 
 
 - Standard in/out image for pipelines
 - Customizable left and right-hand side of operations 
+- Negate the result of the logical operations with the -n flag 
 
 ## Installation
 
