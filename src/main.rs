@@ -2,7 +2,7 @@ use arithmetic::arithmetic::{add, div, mult, sub};
 use bitwise::bitwise::{and, bitshift, or, xor, BitshiftDirection};
 use blend::blend::{overlay, screen};
 use clap::{builder::styling::RgbColor, ArgAction, Parser, Subcommand};
-use functions::functions::average;
+use functions::functions::{average, bloom};
 use image::{codecs::png::PngEncoder, ImageEncoder, ImageReader};
 use std::io::{self, BufWriter, Cursor, Read, Write};
 use utils::utils::hex_to_rgb;
@@ -28,6 +28,7 @@ enum SubCommands {
     AVG { color: String },
     SCREEN { color: String },
     OVERLAY { color: String },
+    BLOOM { color: String, intensity: f32 },
 }
 
 #[derive(Parser)]
@@ -66,7 +67,6 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let mut color_arg: Option<&str> = None;
     let mut bit_shift = "";
 
     let in_path = args.input;
@@ -174,6 +174,10 @@ fn main() {
         SubCommands::OVERLAY { color } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             overlay(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
+        }
+        SubCommands::BLOOM { color, intensity } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            bloom(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), intensity)
         }
     };
 
