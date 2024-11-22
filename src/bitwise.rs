@@ -144,7 +144,12 @@ pub mod bitwise {
         RIGHT,
     }
 
-    pub fn bitshift(img: DynamicImage, direction: BitshiftDirection, bits: u8) -> RgbaImage {
+    pub fn bitshift(
+        img: DynamicImage,
+        direction: BitshiftDirection,
+        bits: u8,
+        raw: bool,
+    ) -> RgbaImage {
         let (width, height) = img.dimensions();
 
         let mut output: RgbaImage = ImageBuffer::new(width, height);
@@ -153,20 +158,41 @@ pub mod bitwise {
             let in_pixel = img.get_pixel(x, y);
 
             let (r, g, b, a) = match direction {
-                BitshiftDirection::LEFT => (
-                    ((in_pixel[0] as u16) << bits).min(255) as u8,
-                    ((in_pixel[1] as u16) << bits).min(255) as u8,
-                    ((in_pixel[2] as u16) << bits).min(255) as u8,
-                    in_pixel[3],
-                ),
-                BitshiftDirection::RIGHT => (
-                    ((in_pixel[0] as u16).wrapping_shr(bits.into())).min(255) as u8,
-                    ((in_pixel[1] as u16).wrapping_shr(bits.into())).min(255) as u8,
-                    ((in_pixel[2] as u16).wrapping_shr(bits.into())).min(255) as u8,
-                    in_pixel[3],
-                ),
+                BitshiftDirection::LEFT => {
+                    if raw {
+                        (
+                            ((in_pixel[0] as u16) << bits) as u8,
+                            ((in_pixel[1] as u16) << bits) as u8,
+                            ((in_pixel[2] as u16) << bits) as u8,
+                            in_pixel[3],
+                        )
+                    } else {
+                        (
+                            ((in_pixel[0] as u16) << bits).min(255) as u8,
+                            ((in_pixel[1] as u16) << bits).min(255) as u8,
+                            ((in_pixel[2] as u16) << bits).min(255) as u8,
+                            in_pixel[3],
+                        )
+                    }
+                }
+                BitshiftDirection::RIGHT => {
+                    if raw {
+                        (
+                            (in_pixel[0] >> bits),
+                            (in_pixel[1] >> bits),
+                            (in_pixel[2] >> bits),
+                            in_pixel[3],
+                        )
+                    } else {
+                        (
+                            (in_pixel[0].wrapping_shr(bits.into())),
+                            (in_pixel[1].wrapping_shr(bits.into())),
+                            (in_pixel[2].wrapping_shr(bits.into())),
+                            in_pixel[3],
+                        )
+                    }
+                }
             };
-
             *pixel = Rgba([r, g, b, a]);
         });
 

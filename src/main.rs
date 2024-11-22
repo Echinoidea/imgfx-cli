@@ -1,25 +1,29 @@
 use arithmetic::arithmetic::{add, div, mult, sub};
 use bitwise::bitwise::{and, bitshift, or, xor, BitshiftDirection};
 use clap::{builder::styling::RgbColor, ArgAction, Parser, Subcommand};
+use functions::functions::average;
 use image::{codecs::png::PngEncoder, ImageEncoder, ImageReader};
 use std::io::{self, BufWriter, Cursor, Read, Write};
 use utils::utils::hex_to_rgb;
 
 mod arithmetic;
 mod bitwise;
+mod functions;
 mod utils;
 
 #[derive(Subcommand)]
+#[allow(non_camel_case_types)]
 enum SubCommands {
     OR { color: String },
     AND { color: String },
     XOR { color: String },
-    LEFT { bits: String },
-    RIGHT { bits: String },
+    LEFT { bits: String, raw: Option<String> },
+    RIGHT { bits: String, raw: Option<String> },
     ADD { color: String },
-    SUB { color: String },
+    SUB { color: String, raw: Option<String> },
     MULT { color: String },
     DIV { color: String },
+    AVG { color: String },
 }
 
 #[derive(Parser)]
@@ -100,9 +104,16 @@ fn main() {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             add(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
-        SubCommands::SUB { color } => {
+        SubCommands::SUB { color, raw } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
-            sub(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
+
+            let raw = match raw.as_deref() {
+                Some("raw") => true,
+                Some(_) => false,
+                None => false,
+            };
+
+            sub(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), raw)
         }
         SubCommands::MULT { color } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
@@ -112,25 +123,45 @@ fn main() {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             div(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
-        SubCommands::LEFT { bits } => {
+        SubCommands::LEFT { bits, raw } => {
             bit_shift = &bits;
+
+            let raw = match raw.as_deref() {
+                Some("raw") => true,
+                Some(_) => false,
+                None => false,
+            };
+
             bitshift(
                 img,
                 BitshiftDirection::LEFT,
                 bit_shift
                     .parse::<u8>()
                     .expect("Could not parse bits arg to u8"),
+                raw,
             )
         }
-        SubCommands::RIGHT { bits } => {
+        SubCommands::RIGHT { bits, raw } => {
             bit_shift = &bits;
+
+            let raw = match raw.as_deref() {
+                Some("raw") => true,
+                Some(_) => false,
+                None => false,
+            };
+
             bitshift(
                 img,
                 BitshiftDirection::RIGHT,
                 bit_shift
                     .parse::<u8>()
                     .expect("Could not parse bits arg to u8"),
+                raw,
             )
+        }
+        SubCommands::AVG { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            average(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
     };
 

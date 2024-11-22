@@ -51,6 +51,7 @@ pub mod arithmetic {
         lhs: Option<Vec<String>>,
         rhs: Option<Vec<String>>,
         color: RgbColor,
+        raw: bool,
     ) -> RgbaImage {
         let (width, height) = img.dimensions();
 
@@ -77,11 +78,24 @@ pub mod arithmetic {
                 None => (in_pixel[0], in_pixel[1], in_pixel[2]),
             };
 
-            let r = lhs.0 - rhs.0;
-            let g = lhs.1 - rhs.1;
-            let b = lhs.2 - rhs.2;
-            let a = in_pixel[3];
+            let (r, g, b) = match raw {
+                true => {
+                    let r = lhs.0 - rhs.0;
+                    let g = lhs.1 - rhs.1;
+                    let b = lhs.2 - rhs.2;
 
+                    (r, g, b)
+                }
+                false => {
+                    let r = (lhs.0 as i32 - rhs.0 as i32).abs() as u8;
+                    let g = (lhs.1 as i32 - rhs.1 as i32).abs() as u8;
+                    let b = (lhs.2 as i32 - rhs.2 as i32).abs() as u8;
+
+                    (r, g, b)
+                }
+            };
+
+            let a = in_pixel[3];
             *pixel = Rgba([r, g, b, a]);
         });
 
