@@ -1,17 +1,8 @@
-use arithmetic::{add, div, mult, sub};
-use bitwise::{and, bitshift, or, xor, BitshiftDirection};
-use blend::{overlay, screen};
 use clap::{builder::styling::RgbColor, ArgAction, Parser, Subcommand};
-use functions::{average, bloom};
 use image::{codecs::png::PngEncoder, ImageEncoder, ImageReader};
 use std::io::{self, BufWriter, Cursor, Read, Write};
-use utils::hex_to_rgb;
 
-mod arithmetic;
-mod bitwise;
-mod blend;
-mod functions;
-mod utils;
+use imgfx::*;
 
 #[derive(Subcommand)]
 #[allow(non_camel_case_types)]
@@ -65,8 +56,8 @@ enum SubCommands {
 
 #[derive(Parser)]
 #[command(name = "img-mod")]
-#[command(version = "1.0.1")]
-#[command(about = "Bitwise operations and other stuff to images.", long_about = None)]
+#[command(version = "0.2.0")]
+#[command(about = "Arithmetic, logical, bitwise, filtering, and higher level operations for images.", long_about = None)]
 struct Args {
     #[command(subcommand)]
     cmd: SubCommands,

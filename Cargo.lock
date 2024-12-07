@@ -411,8 +411,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "imgmod"
-version = "0.1.0"
+name = "imgfx"
+version = "0.2.0"
+dependencies = [
+ "clap",
+ "image",
+ "imgfx 0.2.1",
+]
+
+[[package]]
+name = "imgfx"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d458d0c5cd5ec20de6498b942164ad45bf2fb42446b8d3f0c83f1ecc30419eb"
 dependencies = [
  "clap",
  "image",
