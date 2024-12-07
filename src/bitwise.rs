@@ -143,7 +143,13 @@ pub enum BitshiftDirection {
     RIGHT,
 }
 
-pub fn bitshift(img: DynamicImage, direction: BitshiftDirection, bits: u8, raw: bool) -> RgbaImage {
+pub fn bitshift(
+    img: DynamicImage,
+    direction: BitshiftDirection,
+    lhs: Option<Vec<String>>,
+    bits: u8,
+    raw: bool,
+) -> RgbaImage {
     let (width, height) = img.dimensions();
 
     let mut output: RgbaImage = ImageBuffer::new(width, height);
@@ -151,20 +157,28 @@ pub fn bitshift(img: DynamicImage, direction: BitshiftDirection, bits: u8, raw: 
     output.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
         let in_pixel = img.get_pixel(x, y);
 
+        let lhs = match lhs {
+            Some(ref lhs) => (
+                get_channel_by_name_rgba_u8(&lhs[0], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[1], &in_pixel),
+                get_channel_by_name_rgba_u8(&lhs[2], &in_pixel),
+            ),
+            None => (in_pixel[0], in_pixel[1], in_pixel[2]),
+        };
         let (r, g, b, a) = match direction {
             BitshiftDirection::LEFT => {
                 if raw {
                     (
-                        ((in_pixel[0] as u16) << bits) as u8,
-                        ((in_pixel[1] as u16) << bits) as u8,
-                        ((in_pixel[2] as u16) << bits) as u8,
+                        ((lhs.0 as u16) << bits) as u8,
+                        ((lhs.1 as u16) << bits) as u8,
+                        ((lhs.2 as u16) << bits) as u8,
                         in_pixel[3],
                     )
                 } else {
                     (
-                        ((in_pixel[0] as u16) << bits).min(255) as u8,
-                        ((in_pixel[1] as u16) << bits).min(255) as u8,
-                        ((in_pixel[2] as u16) << bits).min(255) as u8,
+                        ((lhs.0 as u16) << bits).min(255) as u8,
+                        ((lhs.1 as u16) << bits).min(255) as u8,
+                        ((lhs.2 as u16) << bits).min(255) as u8,
                         in_pixel[3],
                     )
                 }
@@ -172,16 +186,16 @@ pub fn bitshift(img: DynamicImage, direction: BitshiftDirection, bits: u8, raw: 
             BitshiftDirection::RIGHT => {
                 if raw {
                     (
-                        (in_pixel[0] >> bits),
-                        (in_pixel[1] >> bits),
-                        (in_pixel[2] >> bits),
+                        (lhs.0 >> bits),
+                        (lhs.1 >> bits),
+                        (lhs.2 >> bits),
                         in_pixel[3],
                     )
                 } else {
                     (
-                        (in_pixel[0].wrapping_shr(bits.into())),
-                        (in_pixel[1].wrapping_shr(bits.into())),
-                        (in_pixel[2].wrapping_shr(bits.into())),
+                        (lhs.0.wrapping_shr(bits.into())),
+                        (lhs.1.wrapping_shr(bits.into())),
+                        (lhs.2.wrapping_shr(bits.into())),
                         in_pixel[3],
                     )
                 }

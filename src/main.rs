@@ -16,19 +16,51 @@ mod utils;
 #[derive(Subcommand)]
 #[allow(non_camel_case_types)]
 enum SubCommands {
-    OR { color: String },
-    AND { color: String },
-    XOR { color: String },
-    LEFT { bits: String, raw: Option<String> },
-    RIGHT { bits: String, raw: Option<String> },
-    ADD { color: String },
-    SUB { color: String, raw: Option<String> },
-    MULT { color: String },
-    DIV { color: String },
-    AVG { color: String },
-    SCREEN { color: String },
-    OVERLAY { color: String },
-    BLOOM { color: String, intensity: f32 },
+    OR {
+        color: String,
+    },
+    AND {
+        color: String,
+    },
+    XOR {
+        color: String,
+    },
+    LEFT {
+        bits: String,
+        raw: Option<String>,
+    },
+    RIGHT {
+        bits: String,
+        raw: Option<String>,
+    },
+    ADD {
+        color: String,
+    },
+    SUB {
+        color: String,
+        raw: Option<String>,
+    },
+    MULT {
+        color: String,
+    },
+    DIV {
+        color: String,
+    },
+    AVG {
+        color: String,
+    },
+    SCREEN {
+        color: String,
+    },
+    OVERLAY {
+        color: String,
+    },
+    BLOOM {
+        intensity: f32,
+        radius: f32,
+        min_threshold: u8,
+        max_threshold: Option<u8>,
+    },
 }
 
 #[derive(Parser)]
@@ -139,6 +171,7 @@ fn main() {
             bitshift(
                 img,
                 BitshiftDirection::LEFT,
+                lhs,
                 bit_shift
                     .parse::<u8>()
                     .expect("Could not parse bits arg to u8"),
@@ -157,6 +190,7 @@ fn main() {
             bitshift(
                 img,
                 BitshiftDirection::RIGHT,
+                lhs,
                 bit_shift
                     .parse::<u8>()
                     .expect("Could not parse bits arg to u8"),
@@ -175,10 +209,12 @@ fn main() {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             overlay(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
-        SubCommands::BLOOM { color, intensity } => {
-            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
-            bloom(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), intensity)
-        }
+        SubCommands::BLOOM {
+            intensity,
+            radius,
+            min_threshold,
+            max_threshold,
+        } => bloom(img, intensity, radius, min_threshold, max_threshold),
     };
 
     // Epic fast buffer writing
