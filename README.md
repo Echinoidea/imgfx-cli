@@ -1,41 +1,51 @@
-# imgmod
-## CLI tool for performing logical, arithmetic, and bitwise operations on an image given a color.
+# imgfx-cli
+## Command-line front-end for my crate imgfx.
 
-----------
-## Features 
-- and, or, xor
-- add, sub, div, mult
-- Bitwise left & right 
+Provides configurable low-level operations (arithmetic, logical, bitwise) and high-level operations (bloom, blending modes, pixel sorting) for images.
 
-- Standard in/out image for pipelines
-- Customizable left and right-hand side of operations 
-- Negate the result of the logical operations with the -n flag 
+Functions:
+
+    add, sub, mult, div
+    bitshift left | right
+    and, or, xor (and their complements with -n flag)
+    screen, overlay, average
+    bloom
+
+All functions support operand reordering, allowing precise control over how the image's color channels are processed. Operand reordering lets you redefine how the source image's R, G, and B channels are mapped during the operation.
+
+Each function accepts an image::DynamicImage and returns an image::RgbaImage.
 
 ## Installation
 
-To install `imgmod`, clone the repository and build it with `cargo`:
+To install `imgfx-cli`, clone the repository and build it with `cargo`:
 
 ```bash
-git clone https://github.com/Echinoidea/img-mod.git imgmod
-cd imgmod
+git clone https://github.com/Echinoidea/imgfx-cli.git imgfx-cli 
+cd imgfx-cli 
 cargo build --release
 ```
 
 ## Usage
 ```
-Usage: imgmod [OPTIONS] <COMMAND>
+Arithmetic, logical, bitwise, filtering, and higher level operations for images.
+
+Usage: imgfx [OPTIONS] <COMMAND>
 
 Commands:
-  or     
-  and    
-  xor    
-  left   
-  right  
-  add    
-  sub    
-  mult   
-  div    
-  help   Print this message or the help of the given subcommand(s)
+  or       
+  and      
+  xor      
+  left     
+  right    
+  add      
+  sub      
+  mult     
+  div      
+  avg      
+  screen   
+  overlay  
+  bloom    
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
   -i, --input <INPUT>          path/to/input/image
@@ -49,14 +59,14 @@ Options:
 ```
 
 ## Examples
-```imgmod -i samurai-jack.jpg left 1 | imgmod xor ff0000 --lhs b b b --rhs r r r -n | imgmod and ff0000 | imgmod left 1 > output.png```
+```imgfx -i samurai-jack.jpg left 2 --lhs r r r | imgfx and ff0000```
 ![input](docs/images/samurai-jack.jpg)
 ![output](docs/images/output-samurai-jack.png)
 
-```imgmod -i flcl.png left 4 | imgmod and f7c788```
+```imgfx -i flcl.png left 2 --lhs r r r | imgfx screen f1c5a7```
 ![input](docs/images/flcl.png)
 ![output](docs/images/output-flcl.png)
 
-```imgmod -i ultramurder.png div ff0000 --lhs g g g --rhs b r b```
+```imgfx -i ultramurder.png div ff0000 --lhs g g g --rhs b r b```
 ![input](docs/images/ultramurder.png)
 ![output](docs/images/output-ultrakill-isolated.png)
