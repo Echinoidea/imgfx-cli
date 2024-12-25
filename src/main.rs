@@ -1,69 +1,81 @@
-use clap::{builder::styling::RgbColor, ArgAction, Parser, Subcommand};
+use clap::{builder::styling::RgbColor, Parser, Subcommand};
 use image::{codecs::png::PngEncoder, ImageEncoder, ImageReader};
 use std::io::{self, BufWriter, Cursor, Read, Write};
 
 use imgfx::*;
 
 #[derive(Subcommand)]
-#[allow(non_camel_case_types)]
 enum SubCommands {
-    OR {
+    Or {
         color: String,
+        negate: Option<String>,
     },
-    AND {
+    And {
         color: String,
+        negate: Option<String>,
     },
-    XOR {
+    Xor {
         color: String,
+        negate: Option<String>,
     },
-    LEFT {
+    Left {
         bits: String,
         raw: Option<String>,
     },
-    RIGHT {
+    Right {
         bits: String,
         raw: Option<String>,
     },
-    ADD {
+    Add {
         color: String,
     },
-    SUB {
+    Sub {
         color: String,
         raw: Option<String>,
     },
-    MULT {
+    Mult {
         color: String,
     },
-    DIV {
+    Pow {
         color: String,
     },
-    AVG {
+    Div {
         color: String,
     },
-    SCREEN {
+    Average {
         color: String,
     },
-    OVERLAY {
+    Screen {
         color: String,
     },
-    BLOOM {
+    Overlay {
+        color: String,
+    },
+    Bloom {
         intensity: f32,
         radius: f32,
         min_threshold: u8,
         max_threshold: Option<u8>,
     },
+    Sort {
+        direction: Direction,
+        sort_by: SortBy,
+        min_threshold: f32,
+        max_threshold: f32,
+        reversed: Option<String>,
+    },
 }
 
 #[derive(Parser)]
-#[command(name = "img-mod")]
-#[command(version = "0.2.0")]
-#[command(about = "Arithmetic, logical, bitwise, filtering, and higher level operations for images.", long_about = None)]
+#[command(name = "imgfx")]
+#[command(version = "0.2.2")]
+#[command(about = "Fast and configurable image filtering and operations.", long_about = None)]
 struct Args {
     #[command(subcommand)]
     cmd: SubCommands,
 
     /// path/to/input/image
-    #[arg(short, long, global = true)]
+    #[arg(short, long)]
     input: Option<String>,
 
     /// path/to/output/image
@@ -77,25 +89,24 @@ struct Args {
     /// Specify the right hand side operands for the function. E.g. --rhs b r b
     #[arg(long, num_args(1..), global = true)]
     rhs: Option<Vec<String>>,
-
-    /// If function is 'left' or 'right', how many bits to shift by.
-    #[arg(short, long)]
-    bit_shift: Option<u8>,
-
-    /// Negate the logical operator
-    #[arg(short, long, action=ArgAction::SetTrue, global = true)]
-    negate: bool,
+    ///// If function is 'left' or 'right', how many bits to shift by.
+    //#[arg(short, long)]
+    //bit_shift: Option<u8>,
 }
 
 fn main() {
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(num_cpus::get())
+        .build_global()
+        .unwrap();
+
     let args = Args::parse();
 
-    let mut bit_shift = "";
+    //let mut bit_shift = "";
 
     let in_path = args.input;
     let lhs = args.lhs;
     let rhs = args.rhs;
-    let negate = args.negate;
 
     let img = match in_path {
         Some(path) => image::open(path).expect("Failed to open image."),
@@ -115,23 +126,39 @@ fn main() {
     };
 
     let output = match args.cmd {
-        SubCommands::OR { color } => {
+        SubCommands::Or { color, negate } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
-            or(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate)
+            let n = match negate.as_deref() {
+                Some("negate") => true,
+                Some(_) => false,
+                None => false,
+            };
+
+            or(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), n)
         }
-        SubCommands::AND { color } => {
+        SubCommands::And { color, negate } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
-            and(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate)
+            let n = match negate.as_deref() {
+                Some("negate") => true,
+                Some(_) => false,
+                None => false,
+            };
+            and(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), n)
         }
-        SubCommands::XOR { color } => {
+        SubCommands::Xor { color, negate } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
-            xor(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), negate)
+            let n = match negate.as_deref() {
+                Some("negate") => true,
+                Some(_) => false,
+                None => false,
+            };
+            xor(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), n)
         }
-        SubCommands::ADD { color } => {
+        SubCommands::Add { color } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             add(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
-        SubCommands::SUB { color, raw } => {
+        SubCommands::Sub { color, raw } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
 
             let raw = match raw.as_deref() {
@@ -142,16 +169,20 @@ fn main() {
 
             sub(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2), raw)
         }
-        SubCommands::MULT { color } => {
+        SubCommands::Mult { color } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             mult(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
-        SubCommands::DIV { color } => {
+        SubCommands::Pow { color } => {
+            let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
+            pow(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
+        }
+        SubCommands::Div { color } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             div(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
-        SubCommands::LEFT { bits, raw } => {
-            bit_shift = &bits;
+        SubCommands::Left { bits, raw } => {
+            let bit_shift = &bits;
 
             let raw = match raw.as_deref() {
                 Some("raw") => true,
@@ -169,8 +200,8 @@ fn main() {
                 raw,
             )
         }
-        SubCommands::RIGHT { bits, raw } => {
-            bit_shift = &bits;
+        SubCommands::Right { bits, raw } => {
+            let bit_shift = &bits;
 
             let raw = match raw.as_deref() {
                 Some("raw") => true,
@@ -188,24 +219,45 @@ fn main() {
                 raw,
             )
         }
-        SubCommands::AVG { color } => {
+        SubCommands::Average { color } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             average(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
-        SubCommands::SCREEN { color } => {
+        SubCommands::Screen { color } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             screen(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
-        SubCommands::OVERLAY { color } => {
+        SubCommands::Overlay { color } => {
             let rgb = hex_to_rgb(&color).expect("Could not convert color to rgb");
             overlay(img, lhs, rhs, RgbColor(rgb.0, rgb.1, rgb.2))
         }
-        SubCommands::BLOOM {
+        SubCommands::Bloom {
             intensity,
             radius,
             min_threshold,
             max_threshold,
         } => bloom(img, intensity, radius, min_threshold, max_threshold),
+        SubCommands::Sort {
+            direction,
+            sort_by,
+            min_threshold,
+            max_threshold,
+            reversed,
+        } => {
+            let reversed = match reversed.as_deref() {
+                Some("reversed") => true,
+                Some(_) => false,
+                None => false,
+            };
+            sort(
+                Into::into(img),
+                direction,
+                sort_by,
+                min_threshold,
+                max_threshold,
+                reversed,
+            )
+        }
     };
 
     // Epic fast buffer writing
